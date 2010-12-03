@@ -49,6 +49,18 @@ class Webapp extends PluginHook {
     private $activePlugin = "twitter";
 
     /**
+     *
+     * @var array Plugin objects
+     */
+    private $active_plugins = null;
+
+    /**
+     *
+     * @var array MenuItem objects
+     */
+    private $post_detail_menus = null;
+
+    /**
      * Get the singleton instance of Webapp
      * @return Webapp
      */
@@ -93,18 +105,60 @@ class Webapp extends PluginHook {
             throw new Exception("The ".get_class($p)." object does not have a getDashboardMenu method.");
         }
     }
+
+    public function getPostDetailMenus($post) {
+        if ($this->post_detail_menus === null) {
+            $this->post_detail_menus = array();
+            //Get all active plugins
+            $plugin_dao = DAOFactory::getDAO('PluginDAO');
+            $this->active_plugins = $plugin_dao->getActivePlugins();
+            //For each active plugin, check if getPostDetailMenu method exists
+            foreach ($this->active_plugins as $plugin) {
+                $plugin_class_name = $this->getPluginObject($plugin->folder_name);
+                //if so, add to sidebar_menu
+                $p = new $plugin_class_name;
+                if (method_exists($p, 'getPostDetailMenu')) {
+                    $menu = call_user_func(array($p, 'getPostDetailMenu'), $post);
+                    array_push($this->post_detail_menus, $menu);
+                }
+            }
+        }
+        return $this->post_detail_menus;
+
+    }
     /**
-     * Get individual MenuItem
+     * Get individual Dashboard MenuItem
      * @param str $menu_item_short_name
      * @param Instance $instance
      * @return MenuItem for instance, null if none available for given short name
      */
-    public function getMenuItem($menu_item_short_name, $instance) {
+    public function getDashboardMenuItem($menu_item_short_name, $instance) {
         $menus = $this->getDashboardMenu($instance);
         foreach ($menus as $menu) {
             foreach ($menu->items as $menu_item) {
                 if ($menu_item->short_name == $menu_item_short_name) {
                     return $menu_item;
+                }
+            }
+        }
+        return null;
+    }
+    /**
+     * Get individual post detail MenuItem
+     * @param str $menu_item_short_name
+     * @param Instance $instance
+     * @return MenuItem for instance, null if none available for given short name
+     */
+    public function getPostDetailMenuItem($menu_item_short_name, $post) {
+        if ($this->post_detail_menus === null) {
+            $this->getPostDetailMenus($post);
+        }
+        foreach ($this->post_detail_menus as $menu) {
+            foreach ($menu as $m) {
+                foreach ($m->items as $menu_item) {
+                    if ($menu_item->short_name == $menu_item_short_name) {
+                        return $menu_item;
+                    }
                 }
             }
         }

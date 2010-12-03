@@ -31,7 +31,15 @@
  *
  */
 class PostController extends ThinkUpController {
+    /**
+     * View name
+     * @var str
+     */
+    var $view_name;
+
     public function control() {
+        $this->view_name = (isset($_GET['v']))?$_GET['v']:'default';
+
         $post_dao = DAOFactory::getDAO('PostDAO');
         $this->setPageTitle('Post Replies and Forwards');
         $this->setViewTemplate('post.index.tpl');
@@ -94,6 +102,12 @@ class PostController extends ThinkUpController {
                         $all_replies_count = count($replies);
                         $private_reply_count = $all_replies_count - $public_replies_count;
                         $this->addToView('private_reply_count', $private_reply_count );
+
+                        $webapp = Webapp::getInstance();
+                        $sidebar_menus = $webapp->getPostDetailMenus($post);
+                        //print_r($sidebar_menus);
+                        $this->addToView('sidebar_menus', $sidebar_menus);
+                        $this->loadView($post);
                     } else {
                         $this->addErrorMessage('Insufficient privileges');
                     }
@@ -105,5 +119,34 @@ class PostController extends ThinkUpController {
             }
         }
         return $this->generateView();
+    }
+
+    /**
+     * Load the view with required variables
+     */
+    private function loadView($post) {
+        $webapp = Webapp::getInstance();
+        if ($this->view_name != 'default') {
+            $menu_item = $webapp->getPostDetailMenuItem($this->view_name, $post);
+            if ($menu_item != null ) {
+                $this->addToView('data_template', $menu_item->view_template);
+                $this->addToView('display', $menu_item->short_name);
+                $this->addToView('header', $menu_item->name);
+                $this->addToView('description', $menu_item->description);
+
+                $page = (isset($_GET['page']) && is_numeric($_GET['page']))?$_GET['page']:1;
+                foreach ($menu_item->datasets as $dataset) {
+                    if (array_search('#page_number#', $dataset->method_params) !== false) { //there's paging
+                        $this->addToView('next_page', $page+1);
+                        $this->addToView('last_page', $page-1);
+                    }
+                    $this->addToView($dataset->name, $dataset->retrieveDataset($page));
+                    if(Session::isLoggedIn() && $dataset->isSearchable()) {
+                        $view_name = 'is_searchable';
+                        $this->addToView($view_name, true);
+                    }
+                }
+            }
+        }
     }
 }

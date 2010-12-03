@@ -362,4 +362,36 @@ class TwitterPlugin implements CrawlerPlugin, DashboardPlugin {
             return "is_reply_by_friend DESC, follower_count DESC";
         }
     }
+
+    public function getPostDetailMenu($post) {
+        $template_path = Utils::getPluginViewDirectory('hellothinkup').'hellothinkup.inline.view.tpl';
+        $menus = array();
+
+        //Define a menu (collection of menu items)
+        $hello_menu_1 = new Menu('Twitter Plugin 1');
+        //Define a menu item
+        $hello_menu_item_1 = new MenuItem("twitter_plugin_replies_1", "Replies 1", "", $template_path);
+        //Define a dataset to be displayed when that menu item is selected
+        $hello_menu_item_dataset_1 = new Dataset("twitter_plugin_replies_1", 'PostDAO', "getRepliesToPost",
+        array($post->post_id, $post->network, 'location') );
+        //Associate dataset with menu item
+        $hello_menu_item_1->addDataset($hello_menu_item_dataset_1);
+        //Add menu item to menu
+        $hello_menu_1->addMenuItem($hello_menu_item_1);
+
+        //Define a menu item
+        $hello_menu_item_2 = new MenuItem("twitter_plugin_replies_2", "Replies 2", "", $template_path);
+        //Define a dataset to be displayed when that menu item is selected
+        $hello_menu_item_dataset_2 = new Dataset("twitter_plugin_replies_2", 'PostDAO', "getRepliesToPost",
+        array($post->post_id, $post->network, 'location') );
+        //Associate dataset with menu item
+        $hello_menu_item_2->addDataset($hello_menu_item_dataset_2);
+        //Add menu item to menu
+        $hello_menu_1->addMenuItem($hello_menu_item_2);
+
+        array_push($menus, $hello_menu_1);
+
+        return $menus;
+    }
+
 }
